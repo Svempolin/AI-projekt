@@ -1,0 +1,16 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #f7f8fa; font-family: 'Inter', 'Segoe UI', sans-serif; }
+input:focus { border-color: #1a1a2e !important; box-shadow: 0 0 0 3px rgba(26,26,46,0.09); outline: none; }
+button { transition: opacity 0.15s; cursor: pointer; }
+button:hover { opacity: 0.82; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid #ffffff55;
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}

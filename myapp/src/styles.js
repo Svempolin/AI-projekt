@@ -1,0 +1,33 @@
+export const s = {
+  page:      { minHeight:'100vh', background:'#f7f8fa', display:'flex', alignItems:'center', justifyContent:'center', padding:'24px' },
+  card:      { background:'#fff', borderRadius:'16px', padding:'40px 36px', width:'100%', maxWidth:'420px', boxShadow:'0 2px 20px rgba(0,0,0,0.09)' },
+  logo:      { display:'flex', alignItems:'center', gap:'10px', marginBottom:'28px' },
+  logoMark:  { width:'36px', height:'36px', background:'#1a1a2e', color:'#fff', borderRadius:'10px', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'700', fontSize:'18px' },
+  appName:   { fontWeight:'700', fontSize:'18px', color:'#1a1a2e' },
+  h1:        { margin:'0 0 6px', fontSize:'24px', fontWeight:'700', color:'#111', letterSpacing:'-0.4px' },
+  sub:       { margin:'0 0 24px', fontSize:'14px', color:'#888' },
+  form:      { display:'flex', flexDirection:'column', gap:'14px' },
+  row:       { display:'flex', gap:'12px' },
+  fg:        { display:'flex', flexDirection:'column', gap:'5px', flex:1 },
+  label:     { fontSize:'13px', fontWeight:'500', color:'#444' },
+  input:     { padding:'10px 12px', border:'1px solid #e2e4e9', borderRadius:'8px', fontSize:'14px', color:'#111', width:'100%', background:'#fafafa' },
+  pwWrap:    { position:'relative' },
+  eyeBtn:    { position:'absolute', right:'10px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', fontSize:'15px' },
+  labelRow:  { display:'flex', justifyContent:'space-between', alignItems:'center' },
+  forgotBtn: { background:'none', border:'none', fontSize:'13px', color:'#666', padding:0, textDecoration:'underline' },
+  btn:       { padding:'12px', background:'#1a1a2e', color:'#fff', border:'none', borderRadius:'8px', fontSize:'15px', fontWeight:'600', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px' },
+  btnGhost:  { padding:'12px', background:'#fff', color:'#1a1a2e', border:'1px solid #e2e4e9', borderRadius:'8px', fontSize:'15px', fontWeight:'600' },
+  err:       { background:'#fff0f0', border:'1px solid #fcc', borderRadius:'8px', padding:'10px 12px', fontSize:'13px', color:'#c00' },
+  bottom:    { marginTop:'20px', textAlign:'center', fontSize:'13px', color:'#888' },
+  link:      { background:'none', border:'none', fontSize:'13px', color:'#1a1a2e', fontWeight:'600', padding:0, textDecoration:'underline' },
+}
+
+export const errMsg = (code) => ({
+  'auth/email-already-in-use': 'E-postadressen används redan.',
+  'auth/invalid-email':        'Ogiltig e-postadress.',
+  'auth/weak-password':        'Lösenordet måste vara minst 6 tecken.',
+  'auth/user-not-found':       'Ingen användare med den e-postadressen.',
+  'auth/wrong-password':       'Fel lösenord.',
+  'auth/invalid-credential':   'Fel e-post eller lösenord.',
+  'auth/too-many-requests':    'För många försök. Vänta en stund.',
+}[code] || 'Något gick fel. Försök igen.')
