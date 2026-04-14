@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { db } from '../firebase'
+import { db, storage } from '../firebase'
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'
+import { ref, getBlob } from 'firebase/storage'
 
 const BACKGROUNDS = [
   { label: 'Vit',        value: '#ffffff' },
@@ -178,33 +179,60 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
     if (selectedId === uid) setSelectedId(null)
   }
 
-  // ── Generate thumbnail ────────────────────────────────────────────
-  const generateThumbnail = async () => {
-    const canvasEl  = canvasRef.current
-    const rect      = canvasEl.getBoundingClientRect()
-    const size      = 240
-    const offscreen = document.createElement('canvas')
-    offscreen.width  = size
-    offscreen.height = size
-    const ctx   = offscreen.getContext('2d')
-    const scale = size / rect.width
-    ctx.scale(scale, scale)
-    ctx.fillStyle = bg
-    ctx.fillRect(0, 0, rect.width, rect.height)
-    for (const item of canvasItems) {
-      await new Promise(res => {
-        const img = new Image()
-        img.crossOrigin = 'anonymous'
-        img.onload = () => {
-          const aspect = img.naturalHeight / img.naturalWidth
-          ctx.drawImage(img, item.x, item.y, item.width, item.width * aspect)
-          res()
-        }
-        img.onerror = res
-        img.src = item.photoURL
-      })
+  // ── Helper: download Firebase Storage image via SDK (no CORS needed) ──
+  const fetchFirebaseBlob = async (photoURL) => {
+    try {
+      // Extract storage path from Firebase Storage URL
+      const match = photoURL.match(/\/o\/(.+?)(\?|$)/)
+      if (match) {
+        const path = decodeURIComponent(match[1])
+        const blob = await getBlob(ref(storage, path))
+        return URL.createObjectURL(blob)
+      }
+    } catch (e) {
+      console.warn('SDK blob fetch failed, trying fetch:', e)
     }
-    return offscreen.toDataURL('image/jpeg', 0.7)
+    // Fallback: regular fetch (works if CORS is configured)
+    const res = await fetch(photoURL)
+    const blob = await res.blob()
+    return URL.createObjectURL(blob)
+  }
+
+  // ── Generate thumbnail of the full collage ───────────────────────
+  const generateThumbnail = async () => {
+    // Try canvas-based thumbnail (requires CORS on Firebase Storage)
+    try {
+      const canvasEl  = canvasRef.current
+      const rect      = canvasEl.getBoundingClientRect()
+      const size      = 480
+      const offscreen = document.createElement('canvas')
+      offscreen.width  = size
+      offscreen.height = size
+      const ctx   = offscreen.getContext('2d')
+      const scale = size / rect.width
+      ctx.scale(scale, scale)
+      ctx.fillStyle = bg
+      ctx.fillRect(0, 0, rect.width, rect.height)
+      for (const item of canvasItems) {
+        const objectURL = await fetchFirebaseBlob(item.photoURL)
+        await new Promise(res => {
+          const img = new Image()
+          img.onload = () => {
+            const aspect = img.naturalHeight / img.naturalWidth
+            ctx.drawImage(img, item.x, item.y, item.width, item.width * aspect)
+            URL.revokeObjectURL(objectURL)
+            res()
+          }
+          img.onerror = () => { URL.revokeObjectURL(objectURL); res() }
+          img.src = objectURL
+        })
+      }
+      return offscreen.toDataURL('image/jpeg', 0.8)
+    } catch (err) {
+      // CORS not configured yet – fall back to first item's photoURL
+      console.warn('Thumbnail canvas failed (CORS), using photoURL fallback:', err)
+      return canvasItems.length > 0 ? canvasItems[0].photoURL : null
+    }
   }
 
   // ── Save collage to Firestore ─────────────────────────────────────
@@ -243,49 +271,62 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
   // ── Save collage as PNG download ──────────────────────────────────
   const saveCollage = async () => {
     setSaving(true)
-    const canvasEl  = canvasRef.current
-    const rect      = canvasEl.getBoundingClientRect()
-    const scale     = 2
-    const offscreen = document.createElement('canvas')
-    offscreen.width  = rect.width  * scale
-    offscreen.height = rect.height * scale
-    const ctx = offscreen.getContext('2d')
-    ctx.scale(scale, scale)
-    ctx.fillStyle = bg
-    ctx.fillRect(0, 0, rect.width, rect.height)
-    for (const item of canvasItems) {
-      await new Promise(res => {
-        const img = new Image()
-        img.crossOrigin = 'anonymous'
-        img.onload = () => {
-          const aspect = img.naturalHeight / img.naturalWidth
-          ctx.drawImage(img, item.x, item.y, item.width, item.width * aspect)
-          res()
-        }
-        img.onerror = res
-        img.src = item.photoURL
-      })
+    try {
+      const canvasEl  = canvasRef.current
+      const rect      = canvasEl.getBoundingClientRect()
+      const scale     = 2
+      const offscreen = document.createElement('canvas')
+      offscreen.width  = rect.width  * scale
+      offscreen.height = rect.height * scale
+      const ctx = offscreen.getContext('2d')
+      ctx.scale(scale, scale)
+      ctx.fillStyle = bg
+      ctx.fillRect(0, 0, rect.width, rect.height)
+      for (const item of canvasItems) {
+        // Download via Firebase SDK → objectURL (bypasses canvas CORS restriction)
+        const objectURL = await fetchFirebaseBlob(item.photoURL)
+        await new Promise(res => {
+          const img = new Image()
+          img.onload = () => {
+            const aspect = img.naturalHeight / img.naturalWidth
+            ctx.drawImage(img, item.x, item.y, item.width, item.width * aspect)
+            URL.revokeObjectURL(objectURL)
+            res()
+          }
+          img.onerror = () => { URL.revokeObjectURL(objectURL); res() }
+          img.src = objectURL
+        })
+      }
+      const link = document.createElement('a')
+      link.download = `kollage-${Date.now()}.png`
+      link.href = offscreen.toDataURL('image/png')
+      link.click()
+    } catch (err) {
+      console.error('PNG export failed:', err)
+      alert('Kunde inte spara bilden. Försök igen.')
     }
-    const link = document.createElement('a')
-    link.download = `kollage-${Date.now()}.png`
-    link.href = offscreen.toDataURL('image/png')
-    link.click()
     setSaving(false)
   }
 
   const canSave = canvasItems.length > 0
 
   return (
-    <div style={{ height:'100vh', display:'flex', flexDirection:'column', fontFamily:"'Inter','Segoe UI',sans-serif", background:'#fff' }}>
+    <div style={{ height:'100%', display:'flex', flexDirection:'column', fontFamily:"'Inter','Segoe UI',sans-serif", background:'#fff' }}>
 
       {/* ── Topbar ── */}
-      <div style={{ borderBottom:'1px solid #e8e8e8', padding:'0 16px', height:'52px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, gap:'8px' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+      <div style={{ borderBottom:'1px solid #e8e8e8', padding:'0 12px', height:'52px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, gap:'8px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+          {/* Garderob-knapp */}
           <button onClick={() => onNavigate('wardrobe')}
-            style={{ background:'none', border:'none', cursor:'pointer', color:'#111', display:'flex', alignItems:'center' }}>
-            <BackIcon/>
+            style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'#f5f5f5', border:'none', borderRadius:'8px', cursor:'pointer', color:'#111', fontSize:'12px', fontWeight:'700', letterSpacing:'0.05em' }}>
+            <BackIcon/> GARDEROB
           </button>
-          <span style={{ fontWeight:'800', fontSize:'15px', letterSpacing:'0.08em' }}>BYGGKOLLAGE</span>
+          {/* Flöde / Flea market */}
+          <button onClick={() => onNavigate('fleamarket')}
+            style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'#f0fdf4', border:'none', borderRadius:'8px', cursor:'pointer', color:'#16a34a', fontSize:'12px', fontWeight:'700', letterSpacing:'0.05em' }}>
+            🏷️ FLÖDE
+          </button>
+          <span style={{ fontWeight:'800', fontSize:'14px', letterSpacing:'0.08em', color:'#ccc', marginLeft:'4px' }}>BYGGKOLLAGE</span>
         </div>
 
         {/* Bakgrundsfärger */}

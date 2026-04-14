@@ -62,7 +62,7 @@ export default function CollectionsPage({ user, onNavigate, onOpenCollage }) {
   // ── Preview modal ────────────────────────────────────────────────
   if (preview) {
     return (
-      <div style={{ height:'100vh', display:'flex', flexDirection:'column', fontFamily:"'Inter','Segoe UI',sans-serif", background:'#fff' }}>
+      <div style={{ height:'100%', display:'flex', flexDirection:'column', fontFamily:"'Inter','Segoe UI',sans-serif", background:'#fff' }}>
         <div style={{ borderBottom:'1px solid #e8e8e8', padding:'0 16px', height:'52px', display:'flex', alignItems:'center', gap:'12px', flexShrink:0 }}>
           <button onClick={() => setPreview(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'#111', display:'flex', alignItems:'center' }}>
             <BackIcon/>
@@ -88,7 +88,7 @@ export default function CollectionsPage({ user, onNavigate, onOpenCollage }) {
   if (openFolder) {
     const collages = grouped[openFolder] || []
     return (
-      <div style={{ height:'100vh', display:'flex', flexDirection:'column', fontFamily:"'Inter','Segoe UI',sans-serif", background:'#fff' }}>
+      <div style={{ height:'100%', display:'flex', flexDirection:'column', fontFamily:"'Inter','Segoe UI',sans-serif", background:'#fff' }}>
         <div style={{ borderBottom:'1px solid #e8e8e8', padding:'0 16px', height:'52px', display:'flex', alignItems:'center', gap:'12px', flexShrink:0 }}>
           <button onClick={() => setOpenFolder(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'#111', display:'flex', alignItems:'center' }}>
             <BackIcon/>
@@ -143,12 +143,12 @@ export default function CollectionsPage({ user, onNavigate, onOpenCollage }) {
 
   // ── Folder list ──────────────────────────────────────────────────
   return (
-    <div style={{ height:'100vh', display:'flex', flexDirection:'column', fontFamily:"'Inter','Segoe UI',sans-serif", background:'#fff' }}>
+    <div style={{ height:'100%', display:'flex', flexDirection:'column', fontFamily:"'Inter','Segoe UI',sans-serif", background:'#fff' }}>
       <div style={{ borderBottom:'1px solid #e8e8e8', padding:'0 16px', height:'52px', display:'flex', alignItems:'center', gap:'12px', flexShrink:0 }}>
         <button onClick={() => onNavigate('wardrobe')} style={{ background:'none', border:'none', cursor:'pointer', color:'#111', display:'flex', alignItems:'center' }}>
           <BackIcon/>
         </button>
-        <span style={{ fontWeight:'800', fontSize:'15px', letterSpacing:'0.08em' }}>MINA SAMLINGAR</span>
+        <span style={{ fontWeight:'800', fontSize:'15px', letterSpacing:'0.08em' }}>MINA KOLLAGE</span>
         <div style={{ flex:1 }}/>
         <button onClick={() => onNavigate('collage')}
           style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 14px', background:'#111', color:'#fff', border:'none', fontSize:'12px', fontWeight:'700', letterSpacing:'0.07em', cursor:'pointer' }}>
@@ -156,14 +156,14 @@ export default function CollectionsPage({ user, onNavigate, onOpenCollage }) {
         </button>
       </div>
 
-      <div style={{ flex:1, overflowY:'auto', padding:'32px' }}>
+      <div style={{ flex:1, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'32px 32px 80px' }}>
         {loading ? (
           <div style={{ textAlign:'center', color:'#ccc', marginTop:'60px' }}>Laddar…</div>
         ) : folderNames.length === 0 ? (
           <div style={{ textAlign:'center', marginTop:'80px' }}>
             <div style={{ fontSize:'48px', marginBottom:'16px' }}>📁</div>
-            <div style={{ fontWeight:'700', fontSize:'16px', letterSpacing:'0.06em', color:'#333', marginBottom:'8px' }}>Inga samlingar än</div>
-            <div style={{ fontSize:'13px', color:'#aaa', marginBottom:'24px' }}>Bygg ett kollage och spara det i en samling!</div>
+            <div style={{ fontWeight:'700', fontSize:'16px', letterSpacing:'0.06em', color:'#333', marginBottom:'8px' }}>Inga kollage än</div>
+            <div style={{ fontSize:'13px', color:'#aaa', marginBottom:'24px' }}>Bygg ett kollage och spara det!</div>
             <button onClick={() => onNavigate('collage')}
               style={{ display:'inline-flex', alignItems:'center', gap:'6px', padding:'12px 20px', background:'#111', color:'#fff', border:'none', fontSize:'13px', fontWeight:'700', letterSpacing:'0.06em', cursor:'pointer' }}>
               <PlusIcon/> SKAPA KOLLAGE
