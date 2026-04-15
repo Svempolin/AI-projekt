@@ -2,6 +2,46 @@ import { useState, useEffect } from 'react'
 import { db } from '../firebase'
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore'
 
+// Renders a collage from items data (positions + photos) — no canvas/CORS needed
+function CollageRenderer({ items, bg, width, height }) {
+  if (!items || items.length === 0) {
+    return <div style={{ width, height, background: bg || '#f5f0e8' }}/>
+  }
+  const CANVAS_SIZE = 600
+  const scaleX = width  / CANVAS_SIZE
+  const scaleY = height / CANVAS_SIZE
+  const scale  = Math.min(scaleX, scaleY)
+  return (
+    <div style={{ width, height, background: bg || '#f5f0e8', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+      {items.map((item, i) => (
+        <img key={item.uid ?? i} src={item.photoURL} alt=""
+          style={{
+            position: 'absolute',
+            left:   item.x     * scale,
+            top:    item.y     * scale,
+            width:  item.width * scale,
+            objectFit: 'contain',
+            pointerEvents: 'none',
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+// Small thumbnail: shows up to 4 items in a 2x2 grid (simpler, fast)
+function CollageThumbnail({ collage, size }) {
+  const items = collage.items || []
+  if (items.length === 0 && collage.thumbnail) {
+    return <img src={collage.thumbnail} alt={collage.name} style={{ width: size, height: size, objectFit: 'cover', display: 'block' }}/>
+  }
+  if (items.length === 0) {
+    return <div style={{ width: size, height: size, background: collage.bg || '#f5f0e8' }}/>
+  }
+  // Use CollageRenderer for thumbnails too
+  return <CollageRenderer items={items} bg={collage.bg} width={size} height={size}/>
+}
+
 const BackIcon = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="15 18 9 12 15 6"/>
@@ -77,8 +117,15 @@ export default function CollectionsPage({ user, onNavigate, onOpenCollage }) {
             <TrashIcon/> TA BORT
           </button>
         </div>
-        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', background:'#e8e8e8', padding:'32px' }}>
-          <img src={preview.thumbnail} alt={preview.name} style={{ maxWidth:'600px', maxHeight:'600px', width:'100%', boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}/>
+        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', background:'#e8e8e8', padding:'32px', overflow:'hidden' }}>
+          <div style={{ boxShadow:'0 8px 40px rgba(0,0,0,0.2)', maxWidth:'600px', maxHeight:'600px', width:'100%', aspectRatio:'1' }}>
+            <CollageRenderer
+              items={preview.items}
+              bg={preview.bg}
+              width={Math.min(600, typeof window !== 'undefined' ? window.innerWidth - 64 : 600)}
+              height={Math.min(600, typeof window !== 'undefined' ? window.innerWidth - 64 : 600)}
+            />
+          </div>
         </div>
       </div>
     )
@@ -112,10 +159,9 @@ export default function CollectionsPage({ user, onNavigate, onOpenCollage }) {
                   onClick={() => setPreview(c)}
                   onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
                   onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
-                  {c.thumbnail
-                    ? <img src={c.thumbnail} alt={c.name} style={{ width:'100%', aspectRatio:'1', objectFit:'cover', display:'block' }}/>
-                    : <div style={{ width:'100%', aspectRatio:'1', background: c.bg || '#f5f0e8', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'32px' }}>👗</div>
-                  }
+                  <div style={{ width:'100%', aspectRatio:'1', overflow:'hidden' }}>
+                    <CollageThumbnail collage={c} size={300}/>
+                  </div>
                   <div style={{ padding:'10px 12px' }}>
                     <div style={{ fontWeight:'700', fontSize:'13px', letterSpacing:'0.03em', color:'#111', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{c.name}</div>
                     <div style={{ fontSize:'11px', color:'#aaa', marginTop:'2px' }}>
@@ -156,7 +202,7 @@ export default function CollectionsPage({ user, onNavigate, onOpenCollage }) {
         </button>
       </div>
 
-      <div style={{ flex:1, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'32px 32px 80px' }}>
+      <div style={{ flex:1, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'20px 16px 80px' }}>
         {loading ? (
           <div style={{ textAlign:'center', color:'#ccc', marginTop:'60px' }}>Laddar…</div>
         ) : folderNames.length === 0 ? (
@@ -180,10 +226,10 @@ export default function CollectionsPage({ user, onNavigate, onOpenCollage }) {
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)' }}
                   onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}>
                   {/* Folder thumbnail */}
-                  <div style={{ aspectRatio:'1', background: coverThumb ? 'transparent' : '#f0ede8', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', position:'relative' }}>
-                    {coverThumb
-                      ? <img src={coverThumb} alt={name} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-                      : <FolderIcon size={48}/>
+                  <div style={{ aspectRatio:'1', overflow:'hidden', position:'relative' }}>
+                    {collages[0]?.items?.length > 0
+                      ? <CollageThumbnail collage={collages[0]} size={300}/>
+                      : <div style={{ width:'100%', height:'100%', background:'#f0ede8', display:'flex', alignItems:'center', justifyContent:'center' }}><FolderIcon size={48}/></div>
                     }
                     {/* Overlay count */}
                     <div style={{ position:'absolute', bottom:'8px', right:'8px', background:'rgba(0,0,0,0.55)', color:'#fff', fontSize:'11px', fontWeight:'700', padding:'3px 8px', borderRadius:'20px' }}>

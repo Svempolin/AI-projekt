@@ -64,6 +64,14 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
   const canvasRef   = useRef()
   const dragging    = useRef(null)
   const resizing    = useRef(null)
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth)
+  useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  const isMobile = windowWidth < 768
+  const canvasSize = isMobile ? Math.min(windowWidth - 32, 400) : 600
 
   // ── Load wardrobe ────────────────────────────────────────────────
   useEffect(() => {
@@ -229,9 +237,9 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
       }
       return offscreen.toDataURL('image/jpeg', 0.8)
     } catch (err) {
-      // CORS not configured yet – fall back to first item's photoURL
-      console.warn('Thumbnail canvas failed (CORS), using photoURL fallback:', err)
-      return canvasItems.length > 0 ? canvasItems[0].photoURL : null
+      // Canvas thumbnail failed (CORS) — return null, CollectionsPage renders from items data instead
+      console.warn('Thumbnail canvas failed (CORS), skipping thumbnail:', err)
+      return null
     }
   }
 
@@ -315,87 +323,82 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
 
       {/* ── Topbar ── */}
       <div style={{ borderBottom:'1px solid #e8e8e8', padding:'0 12px', height:'52px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, gap:'8px' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-          {/* Garderob-knapp */}
-          <button onClick={() => onNavigate('wardrobe')}
-            style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'#f5f5f5', border:'none', borderRadius:'8px', cursor:'pointer', color:'#111', fontSize:'12px', fontWeight:'700', letterSpacing:'0.05em' }}>
-            <BackIcon/> GARDEROB
-          </button>
-          {/* Flöde / Flea market */}
-          <button onClick={() => onNavigate('fleamarket')}
-            style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'#f0fdf4', border:'none', borderRadius:'8px', cursor:'pointer', color:'#16a34a', fontSize:'12px', fontWeight:'700', letterSpacing:'0.05em' }}>
-            🏷️ FLÖDE
-          </button>
-          <span style={{ fontWeight:'800', fontSize:'14px', letterSpacing:'0.08em', color:'#ccc', marginLeft:'4px' }}>BYGGKOLLAGE</span>
-        </div>
+        <button onClick={() => onNavigate('wardrobe')}
+          style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 10px', background:'#f5f5f5', border:'none', borderRadius:'8px', cursor:'pointer', color:'#111', fontSize:'12px', fontWeight:'700', flexShrink:0 }}>
+          <BackIcon/> {!isMobile && 'GARDEROB'}
+        </button>
 
-        {/* Bakgrundsfärger */}
-        <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-          <span style={{ fontSize:'11px', color:'#999', letterSpacing:'0.05em', marginRight:'4px' }}>BAKGRUND</span>
-          {BACKGROUNDS.map(b => (
-            <button key={b.value} onClick={() => setBg(b.value)} title={b.label}
-              style={{ width:'22px', height:'22px', borderRadius:'50%', background:b.value, border: bg === b.value ? '2px solid #111' : '2px solid #e0e0e0', cursor:'pointer', flexShrink:0 }}/>
-          ))}
-        </div>
+        {!isMobile && (
+          <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+            <span style={{ fontSize:'11px', color:'#999', marginRight:'2px' }}>BAKGRUND</span>
+            {BACKGROUNDS.map(b => (
+              <button key={b.value} onClick={() => setBg(b.value)} title={b.label}
+                style={{ width:'20px', height:'20px', borderRadius:'50%', background:b.value, border: bg === b.value ? '2px solid #111' : '2px solid #e0e0e0', cursor:'pointer', flexShrink:0 }}/>
+            ))}
+          </div>
+        )}
 
-        <div style={{ display:'flex', gap:'8px' }}>
-          {/* Spara i samling */}
+        {isMobile && (
+          <div style={{ display:'flex', alignItems:'center', gap:'4px' }}>
+            {BACKGROUNDS.map(b => (
+              <button key={b.value} onClick={() => setBg(b.value)} title={b.label}
+                style={{ width:'22px', height:'22px', borderRadius:'50%', background:b.value, border: bg === b.value ? '2px solid #111' : '2px solid #e0e0e0', cursor:'pointer', flexShrink:0 }}/>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display:'flex', gap:'6px' }}>
           <button onClick={() => { if (canSave) setShowModal(true) }} disabled={!canSave}
-            style={{ display:'flex', alignItems:'center', gap:'7px', padding:'9px 14px', background: canSave ? '#fff' : '#f5f5f5', color: canSave ? '#111' : '#bbb', border: canSave ? '1.5px solid #111' : '1.5px solid #e0e0e0', fontSize:'12px', fontWeight:'700', letterSpacing:'0.07em', cursor: canSave ? 'pointer' : 'not-allowed' }}>
-            <FolderIcon/> SPARA I SAMLING
+            style={{ display:'flex', alignItems:'center', gap:'5px', padding:'8px 12px', background: canSave ? '#fff' : '#f5f5f5', color: canSave ? '#111' : '#bbb', border: canSave ? '1.5px solid #111' : '1.5px solid #e0e0e0', borderRadius:'8px', fontSize:'11px', fontWeight:'700', cursor: canSave ? 'pointer' : 'not-allowed' }}>
+            <FolderIcon/> {!isMobile && 'SPARA'}
           </button>
-          {/* Ladda ner PNG */}
           <button onClick={saveCollage} disabled={saving || !canSave}
-            style={{ display:'flex', alignItems:'center', gap:'7px', padding:'9px 14px', background: canSave ? '#111' : '#e0e0e0', color:'#fff', border:'none', fontSize:'12px', fontWeight:'700', letterSpacing:'0.07em', cursor: canSave ? 'pointer' : 'not-allowed' }}>
-            <DownloadIcon/> {saving ? 'SPARAR…' : 'SPARA BILD'}
+            style={{ display:'flex', alignItems:'center', gap:'5px', padding:'8px 12px', background: canSave ? '#111' : '#e0e0e0', color:'#fff', border:'none', borderRadius:'8px', fontSize:'11px', fontWeight:'700', cursor: canSave ? 'pointer' : 'not-allowed' }}>
+            <DownloadIcon/> {!isMobile && (saving ? 'SPARAR…' : 'BILD')}
           </button>
         </div>
       </div>
 
       {/* ── Main layout ── */}
-      <div style={{ flex:1, display:'flex', overflow:'hidden' }}>
+      <div style={{ flex:1, display:'flex', flexDirection: isMobile ? 'column' : 'row', overflow:'hidden' }}>
 
-        {/* ── Sidebar ── */}
-        <div style={{ width:'120px', borderRight:'1px solid #e8e8e8', overflowY:'auto', flexShrink:0, background:'#fafafa' }}>
-          <div style={{ padding:'10px 8px 6px', fontSize:'10px', color:'#aaa', letterSpacing:'0.08em', fontWeight:'700' }}>GARDEROB</div>
-          {wardrobe.length === 0 && (
-            <div style={{ padding:'12px 8px', fontSize:'11px', color:'#ccc', textAlign:'center' }}>Inga plagg ännu</div>
-          )}
-          {wardrobe.map(item => (
-            <div key={item.id}
-              onPointerDown={e => onSidebarPointerDown(e, item)}
-              title={`${item.category} – håll och dra till canvasen`}
-              style={{ margin:'4px 6px', cursor:'grab', borderRadius:'2px', overflow:'hidden', aspectRatio:'3/4', background:'#f0f0f0', position:'relative', userSelect:'none', touchAction:'none' }}>
-              {item.photoURL
-                ? <img src={item.photoURL} alt="" draggable={false}
-                    style={{ width:'100%', height:'100%', objectFit:'cover', pointerEvents:'none', userSelect:'none' }}/>
-                : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'24px' }}>👗</div>
-              }
-              <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'3px 4px', background:'rgba(0,0,0,0.4)' }}>
-                <div style={{ fontSize:'8px', color:'#fff', letterSpacing:'0.04em', fontWeight:'600', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
-                  {item.category?.split(' |')[0].toUpperCase()}
+        {/* ── Sidebar (desktop) / Top strip (mobile hidden, bottom instead) ── */}
+        {!isMobile && (
+          <div style={{ width:'120px', borderRight:'1px solid #e8e8e8', overflowY:'auto', flexShrink:0, background:'#fafafa' }}>
+            <div style={{ padding:'10px 8px 6px', fontSize:'10px', color:'#aaa', letterSpacing:'0.08em', fontWeight:'700' }}>GARDEROB</div>
+            {wardrobe.length === 0 && (
+              <div style={{ padding:'12px 8px', fontSize:'11px', color:'#ccc', textAlign:'center' }}>Inga plagg ännu</div>
+            )}
+            {wardrobe.map(item => (
+              <div key={item.id}
+                onPointerDown={e => onSidebarPointerDown(e, item)}
+                style={{ margin:'4px 6px', cursor:'grab', borderRadius:'2px', overflow:'hidden', aspectRatio:'3/4', background:'#f0f0f0', position:'relative', userSelect:'none', touchAction:'none' }}>
+                {item.photoURL
+                  ? <img src={item.photoURL} alt="" draggable={false}
+                      style={{ width:'100%', height:'100%', objectFit:'cover', pointerEvents:'none', userSelect:'none' }}/>
+                  : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'24px' }}>👗</div>
+                }
+                <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'3px 4px', background:'rgba(0,0,0,0.4)' }}>
+                  <div style={{ fontSize:'8px', color:'#fff', fontWeight:'600', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
+                    {item.category?.split(' |')[0].toUpperCase()}
+                  </div>
                 </div>
               </div>
+            ))}
+            <div style={{ padding:'10px 6px', fontSize:'10px', color:'#ccc', textAlign:'center' }}>Dra plagg till canvasen →</div>
+            <div style={{ borderTop:'1px solid #e8e8e8', marginTop:'8px', padding:'10px 6px' }}>
+              <button onClick={() => onNavigate('collections')}
+                style={{ width:'100%', background:'none', border:'none', cursor:'pointer', fontSize:'10px', color:'#999', display:'flex', flexDirection:'column', alignItems:'center', gap:'4px', padding:'4px 0' }}>
+                <FolderIcon/> MINA SAMLINGAR
+              </button>
             </div>
-          ))}
-          <div style={{ padding:'10px 6px', fontSize:'10px', color:'#ccc', textAlign:'center' }}>
-            Dra plagg till canvasen →
           </div>
-
-          {/* Mina samlingar länk */}
-          <div style={{ borderTop:'1px solid #e8e8e8', marginTop:'8px', padding:'10px 6px' }}>
-            <button onClick={() => onNavigate('collections')}
-              style={{ width:'100%', background:'none', border:'none', cursor:'pointer', fontSize:'10px', color:'#999', letterSpacing:'0.05em', display:'flex', flexDirection:'column', alignItems:'center', gap:'4px', padding:'4px 0' }}>
-              <FolderIcon/>
-              MINA SAMLINGAR
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* ── Canvas ── */}
-        <div style={{ flex:1, overflow:'auto', display:'flex', alignItems:'center', justifyContent:'center', background:'#e8e8e8', padding:'24px' }}>
+        <div style={{ flex:1, overflow:'auto', display:'flex', alignItems:'center', justifyContent:'center', background:'#e8e8e8', padding: isMobile ? '16px' : '24px' }}>
           <div ref={canvasRef} onClick={() => setSelectedId(null)}
-            style={{ position:'relative', width:'600px', height:'600px', background: bg, boxShadow:'0 4px 32px rgba(0,0,0,0.18)', outline: dropHighlight ? '3px dashed #555' : 'none', flexShrink:0, overflow:'hidden' }}>
+            style={{ position:'relative', width:`${canvasSize}px`, height:`${canvasSize}px`, background: bg, boxShadow:'0 4px 32px rgba(0,0,0,0.18)', outline: dropHighlight ? '3px dashed #555' : 'none', flexShrink:0, overflow:'hidden' }}>
 
             {canvasItems.length === 0 && (
               <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', pointerEvents:'none', gap:'10px' }}>
@@ -430,13 +433,34 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
         </div>
       </div>
 
-      {/* ── Bottom hint ── */}
-      <div style={{ borderTop:'1px solid #e8e8e8', padding:'8px 16px', fontSize:'11px', color:'#bbb', letterSpacing:'0.04em', display:'flex', gap:'24px', flexShrink:0 }}>
-        <span>📌 Klicka på ett plagg för att markera det</span>
-        <span>↔ Dra i det svarta hörnet för att ändra storlek</span>
-        <span>🗑 Klicka på rött kryss för att ta bort</span>
-        <span>💾 "Spara bild" laddar ner kollagen som PNG</span>
-      </div>
+      {/* ── Mobil: horisontell klädstrip längst ned ── */}
+      {isMobile && (
+        <div style={{ borderTop:'1px solid #e8e8e8', background:'#fafafa', flexShrink:0 }}>
+          <div style={{ padding:'6px 12px 4px', fontSize:'10px', color:'#aaa', letterSpacing:'0.08em', fontWeight:'700' }}>TRYCK OCH HÅLL — DRA TILL CANVASEN</div>
+          <div style={{ display:'flex', gap:'8px', overflowX:'auto', padding:'0 12px 12px', WebkitOverflowScrolling:'touch' }}>
+            {wardrobe.map(item => (
+              <div key={item.id}
+                onPointerDown={e => onSidebarPointerDown(e, item)}
+                style={{ flexShrink:0, width:'60px', height:'80px', borderRadius:'6px', overflow:'hidden', background:'#f0f0f0', position:'relative', userSelect:'none', touchAction:'none', cursor:'grab' }}>
+                {item.photoURL
+                  ? <img src={item.photoURL} alt="" draggable={false}
+                      style={{ width:'100%', height:'100%', objectFit:'cover', pointerEvents:'none' }}/>
+                  : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'20px' }}>👗</div>
+                }
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Desktop bottom hint ── */}
+      {!isMobile && (
+        <div style={{ borderTop:'1px solid #e8e8e8', padding:'8px 16px', fontSize:'11px', color:'#bbb', letterSpacing:'0.04em', display:'flex', gap:'24px', flexShrink:0 }}>
+          <span>📌 Klicka på ett plagg för att markera det</span>
+          <span>↔ Dra i det svarta hörnet för att ändra storlek</span>
+          <span>🗑 Klicka på rött kryss för att ta bort</span>
+        </div>
+      )}
 
       {/* ── Spara i samling – modal ── */}
       {showModal && (

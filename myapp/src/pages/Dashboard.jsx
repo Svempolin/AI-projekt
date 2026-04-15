@@ -258,7 +258,7 @@ export default function Dashboard({ user, onNavigate }) {
               style={{ position:'absolute', bottom:'2px', right:'2px', width:'26px', height:'26px', borderRadius:'50%', background:'#1a1a2e', border:'2px solid #fff', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
               <CameraIcon/>
             </button>
-            <input ref={fileRef} type="file" accept="image/*" capture="user" style={{ display:'none' }} onChange={handlePhotoChange}/>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handlePhotoChange}/>
           </div>
 
           {/* Info */}

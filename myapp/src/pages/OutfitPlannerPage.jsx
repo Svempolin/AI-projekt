@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react'
 import { db } from '../firebase'
 import { collection, query, where, getDocs, doc, setDoc, getDoc } from 'firebase/firestore'
 
-const isMobileDevice = () => window.innerWidth < 768
-
 const DAYS_SV = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag']
 const DAYS_SHORT = ['MÅN', 'TIS', 'ONS', 'TOR', 'FRE', 'LÖR', 'SÖN']
 
@@ -41,6 +39,14 @@ function getWeekDates(monday) {
 }
 
 export default function OutfitPlannerPage({ user, onNavigate }) {
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth)
+  useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  const isMobile = windowWidth < 768
+
   const [weekOffset, setWeekOffset]   = useState(0)
   const [plans, setPlans]             = useState({}) // { 'YYYY-MM-DD': { items, worn, wornItems } }
   const [wardrobe, setWardrobe]       = useState([])
@@ -149,7 +155,7 @@ export default function OutfitPlannerPage({ user, onNavigate }) {
 
       {/* Topbar — only show back arrow on mobile */}
       <div style={{ background: '#fff', borderBottom: '1px solid #e8e8e8', padding: '0 16px', height: '52px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, zIndex: 100 }}>
-        {isMobileDevice() && (
+        {isMobile && (
           <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#111', display: 'flex', alignItems: 'center' }}>
             <BackIcon/>
           </button>
@@ -167,25 +173,25 @@ export default function OutfitPlannerPage({ user, onNavigate }) {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
-      <div style={{ maxWidth: '680px', margin: '0 auto', padding: '24px 16px 80px' }}>
+      <div style={{ maxWidth: '680px', margin: '0 auto', padding: isMobile ? '16px 12px 80px' : '24px 16px 80px' }}>
 
         {/* Veckonavigering */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <button onClick={() => setWeekOffset(w => w - 1)}
-            style={{ background: '#fff', border: '1.5px solid #e8e8e8', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
-            ← Förra veckan
+            style={{ background: '#fff', border: '1.5px solid #e8e8e8', borderRadius: '8px', padding: isMobile ? '8px 10px' : '8px 14px', fontSize: isMobile ? '18px' : '13px', fontWeight: '700', cursor: 'pointer' }}>
+            {isMobile ? '←' : '← Förra veckan'}
           </button>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '13px', fontWeight: '800', letterSpacing: '0.06em', color: '#111' }}>
+            <div style={{ fontSize: isMobile ? '11px' : '13px', fontWeight: '800', letterSpacing: '0.06em', color: '#111' }}>
               {weekOffset === 0 ? 'DENNA VECKA' : weekOffset === 1 ? 'NÄSTA VECKA' : weekOffset === -1 ? 'FÖRRA VECKAN' : `VECKA ${weekOffset > 0 ? '+' : ''}${weekOffset}`}
             </div>
-            <div style={{ fontSize: '11px', color: '#aaa', marginTop: '2px' }}>
+            <div style={{ fontSize: '10px', color: '#aaa', marginTop: '2px' }}>
               {formatDate(weekDates[0])} – {formatDate(weekDates[6])}
             </div>
           </div>
           <button onClick={() => setWeekOffset(w => w + 1)}
-            style={{ background: '#fff', border: '1.5px solid #e8e8e8', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
-            Nästa vecka →
+            style={{ background: '#fff', border: '1.5px solid #e8e8e8', borderRadius: '8px', padding: isMobile ? '8px 10px' : '8px 14px', fontSize: isMobile ? '18px' : '13px', fontWeight: '700', cursor: 'pointer' }}>
+            {isMobile ? '→' : 'Nästa vecka →'}
           </button>
         </div>
 

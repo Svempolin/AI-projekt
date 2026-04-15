@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { db, storage } from '../firebase'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
@@ -41,6 +41,13 @@ export default function UploadPage({ user, onNavigate }) {
 
   const mainFileRef = useRef()
   const addFileRef  = useRef()
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth)
+  useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  const isMobile = windowWidth < 768
 
   const handle = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
 
@@ -189,19 +196,26 @@ export default function UploadPage({ user, onNavigate }) {
 
   // ── Success ──────────────────────────────────────────────────────────
   if (done) return (
-    <div style={{ minHeight:'100vh', background:'#fff', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', fontFamily:"'Inter','Segoe UI',sans-serif", padding:'24px' }}>
-      <div style={{ fontSize:'56px' }}>✅</div>
-      <h2 style={{ fontSize:'20px', fontWeight:'700', color:'#111' }}>Plagget är sparat!</h2>
-      <p style={{ fontSize:'14px', color:'#999', textAlign:'center' }}>Det syns nu i din garderob under {form.category}.</p>
-      <div style={{ display:'flex', gap:'12px', marginTop:'8px' }}>
-        <button onClick={reset}
-          style={{ padding:'12px 20px', background:'#fff', border:'1px solid #111', fontSize:'13px', fontWeight:'600', letterSpacing:'0.05em', cursor:'pointer' }}>
-          + LÄGG TILL FLER
-        </button>
-        <button onClick={() => onNavigate('wardrobe')}
-          style={{ padding:'12px 20px', background:'#111', color:'#fff', border:'none', fontSize:'13px', fontWeight:'600', letterSpacing:'0.05em', cursor:'pointer' }}>
-          SE GARDEROB
-        </button>
+    <div style={{ minHeight:'100vh', background:'#fff', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:"'Inter','Segoe UI',sans-serif", padding:'32px 24px', boxSizing:'border-box', width:'100%' }}>
+      <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'16px', width:'100%', maxWidth:'320px' }}>
+        {/* Professionell check-ikon istället för emoji */}
+        <div style={{ width:'72px', height:'72px', borderRadius:'50%', background:'#111', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <h2 style={{ fontSize:'22px', fontWeight:'800', color:'#111', margin:0, textAlign:'center', letterSpacing:'-0.01em' }}>Plagget är sparat!</h2>
+        <p style={{ fontSize:'14px', color:'#999', textAlign:'center', margin:0, lineHeight:'1.5' }}>Det syns nu i din garderob under {form.category}.</p>
+        <div style={{ display:'flex', flexDirection:'column', gap:'10px', marginTop:'12px', width:'100%' }}>
+          <button onClick={() => onNavigate('wardrobe')}
+            style={{ width:'100%', padding:'14px', background:'#111', color:'#fff', border:'none', borderRadius:'10px', fontSize:'13px', fontWeight:'800', letterSpacing:'0.06em', cursor:'pointer' }}>
+            SE GARDEROB
+          </button>
+          <button onClick={reset}
+            style={{ width:'100%', padding:'14px', background:'#fff', color:'#111', border:'1.5px solid #e0e0e0', borderRadius:'10px', fontSize:'13px', fontWeight:'700', letterSpacing:'0.05em', cursor:'pointer' }}>
+            + LÄGG TILL FLER
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -224,7 +238,7 @@ export default function UploadPage({ user, onNavigate }) {
       </div>
 
       <div style={{ flex:1, overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
-      <div style={{ maxWidth:'600px', margin:'0 auto', padding:'24px 16px 80px' }}>
+      <div style={{ maxWidth:'600px', margin:'0 auto', padding: isMobile ? '20px 20px 100px' : '24px 32px 80px' }}>
         <form onSubmit={submit}>
 
           {/* ── Huvud-fotoarea ── */}
@@ -233,13 +247,16 @@ export default function UploadPage({ user, onNavigate }) {
             onDrop={e => { e.preventDefault(); photos.length === 0 ? loadFirstPhoto(e.dataTransfer.files[0]) : addFiles(e.dataTransfer.files) }}
             onDragOver={e => e.preventDefault()}
             style={{
-              aspectRatio:'3/4', maxHeight:'420px',
+              aspectRatio: isMobile ? '1/1' : '3/4',
+              maxHeight: isMobile ? '320px' : '420px',
+              width: '100%',
               backgroundColor: activePhoto?.bgRemoved ? '#e8e8e8' : '#f5f5f5',
               backgroundImage: activePhoto?.bgRemoved ? 'repeating-conic-gradient(#ccc 0% 25%, #e8e8e8 0% 50%)' : 'none',
               backgroundSize: activePhoto?.bgRemoved ? '20px 20px' : 'auto',
               display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
               cursor: photos.length === 0 ? 'pointer' : 'default',
               marginBottom:'10px', overflow:'hidden', position:'relative',
+              borderRadius: isMobile ? '12px' : '0',
             }}>
 
             {activePhoto ? (
@@ -249,8 +266,8 @@ export default function UploadPage({ user, onNavigate }) {
               <>
                 <CameraIcon/>
                 <div style={{ marginTop:'12px', fontSize:'13px', color:'#999', textAlign:'center', letterSpacing:'0.04em' }}>
-                  TRYCK FÖR ATT FOTOGRAFERA<br/>
-                  <span style={{ fontSize:'11px' }}>eller dra &amp; släpp en bild</span>
+                  {isMobile ? 'TRYCK FÖR ATT VÄLJA BILD' : 'TRYCK FÖR ATT FOTOGRAFERA'}<br/>
+                  {!isMobile && <span style={{ fontSize:'11px' }}>eller dra &amp; släpp en bild</span>}
                 </div>
               </>
             )}
@@ -325,9 +342,9 @@ export default function UploadPage({ user, onNavigate }) {
           </div>
 
           {/* Dolda file inputs */}
-          <input ref={mainFileRef} type="file" accept="image/*" capture="environment"
+          <input ref={mainFileRef} type="file" accept="image/*"
             style={{ display:'none' }} onChange={e => loadFirstPhoto(e.target.files[0])}/>
-          <input ref={addFileRef} type="file" accept="image/*" capture="environment" multiple
+          <input ref={addFileRef} type="file" accept="image/*" multiple
             style={{ display:'none' }} onChange={e => addFiles(e.target.files)}/>
 
           {/* ── Ta bort bakgrund – för aktiv bild ── */}
@@ -365,7 +382,7 @@ export default function UploadPage({ user, onNavigate }) {
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+            <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'12px' }}>
               <div><label style={labelStyle}>FÄRG</label><input style={inputStyle} type="text" name="color" placeholder="Svart, Beige…" value={form.color} onChange={handle}/></div>
               <div><label style={labelStyle}>MÄRKE</label><input style={inputStyle} type="text" name="brand" placeholder="Zara, H&M…" value={form.brand} onChange={handle}/></div>
             </div>
@@ -376,11 +393,11 @@ export default function UploadPage({ user, onNavigate }) {
                 {SEASONS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+            <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'12px' }}>
               <div><label style={labelStyle}>PRIS (KR)</label><input style={inputStyle} type="number" name="price" placeholder="499" value={form.price} onChange={handle}/></div>
               <div><label style={labelStyle}>KÖPT HOS</label><input style={inputStyle} type="text" name="store" placeholder="Zara, ASOS…" value={form.store} onChange={handle}/></div>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+            <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'12px' }}>
               <div>
                 <label style={labelStyle}>STORLEK</label>
                 <input style={inputStyle} type="text" name="size" placeholder="S, M, 38, 36/32…" value={form.size} onChange={handle}/>

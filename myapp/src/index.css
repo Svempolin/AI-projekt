@@ -1,7 +1,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; overflow: hidden; }
-body { background: #f7f8fa; font-family: 'Inter', 'Segoe UI', sans-serif; }
-#root { height: 100%; }
+html { height: 100%; overflow: hidden; max-width: 100vw; }
+body { height: 100%; overflow: hidden; max-width: 100vw; overflow-x: hidden; background: #f7f8fa; font-family: 'Inter', 'Segoe UI', sans-serif; }
+#root { height: 100%; max-width: 100vw; overflow-x: hidden; }
 input:focus { border-color: #1a1a2e !important; box-shadow: 0 0 0 3px rgba(26,26,46,0.09); outline: none; }
 button { transition: opacity 0.15s; cursor: pointer; }
 button:hover { opacity: 0.82; }
