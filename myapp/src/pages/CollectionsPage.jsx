@@ -7,24 +7,31 @@ function CollageRenderer({ items, bg, width, height }) {
   if (!items || items.length === 0) {
     return <div style={{ width, height, background: bg || '#f5f0e8' }}/>
   }
-  // Dynamically find the extent of all items so scale is correct
-  // regardless of whether collage was made on mobile (368px) or desktop (600px)
-  const maxX = Math.max(...items.map(it => (it.x || 0) + (it.width || 160)))
-  const maxY = Math.max(...items.map(it => {
-    // height is not stored; estimate from aspect ratio or use width as proxy
-    return (it.y || 0) + (it.width || 160) * 1.3
+
+  // Normalize: shift all items so min x/y starts at a small padding
+  const pad  = 8
+  const minX = Math.min(...items.map(it => it.x || 0))
+  const minY = Math.min(...items.map(it => it.y || 0))
+  const shifted = items.map(it => ({
+    ...it,
+    x: (it.x || 0) - minX + pad,
+    y: (it.y || 0) - minY + pad,
   }))
-  const extent = Math.max(maxX, maxY, 100)
+
+  // Find extent of shifted items (height estimated as width * 1.3)
+  const maxX   = Math.max(...shifted.map(it => it.x + (it.width || 160)))
+  const maxY   = Math.max(...shifted.map(it => it.y + (it.width || 160) * 1.3))
+  const extent = Math.max(maxX, maxY) + pad
   const scale  = Math.min(width, height) / extent
 
   return (
     <div style={{ width, height, background: bg || '#f5f0e8', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
-      {items.map((item, i) => (
+      {shifted.map((item, i) => (
         <img key={item.uid ?? i} src={item.photoURL} alt=""
           style={{
             position: 'absolute',
-            left:      (item.x     || 0) * scale,
-            top:       (item.y     || 0) * scale,
+            left:      item.x     * scale,
+            top:       item.y     * scale,
             width:     (item.width || 160) * scale,
             objectFit: 'contain',
             pointerEvents: 'none',
