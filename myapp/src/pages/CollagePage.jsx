@@ -70,6 +70,17 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
+
+  // Prevent browser scroll when dragging items on canvas (mobile)
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const prevent = e => {
+      if (dragging.current || resizing.current) e.preventDefault()
+    }
+    canvas.addEventListener('touchmove', prevent, { passive: false })
+    return () => canvas.removeEventListener('touchmove', prevent)
+  }, [])
   const isMobile  = windowWidth < 768
   // Mobile: full width, 4:3 landscape height (compact, fits 5-6 items)
   // Desktop: 480×480 (was 600, felt too spacious)
@@ -147,6 +158,7 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
   // ── Move items on canvas ──────────────────────────────────────────
   const onItemPointerDown = (e, id) => {
     e.stopPropagation()
+    e.preventDefault() // prevent browser scroll on mobile
     setSelectedId(id)
     const item = canvasItems.find(i => i.uid === id)
     dragging.current = { id, offsetX: e.clientX - item.x, offsetY: e.clientY - item.y }
@@ -402,9 +414,9 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
         )}
 
         {/* ── Canvas ── */}
-        <div style={{ flex:1, overflow:'auto', display:'flex', alignItems:'center', justifyContent:'center', background:'#e8e8e8', padding: isMobile ? '16px' : '24px' }}>
+        <div style={{ flex:1, overflow: isMobile ? 'hidden' : 'auto', display:'flex', alignItems:'center', justifyContent:'center', background:'#e8e8e8', padding: isMobile ? '12px' : '24px' }}>
           <div ref={canvasRef} onClick={() => setSelectedId(null)}
-            style={{ position:'relative', width:`${canvasW}px`, height:`${canvasH}px`, background: bg, boxShadow:'0 4px 32px rgba(0,0,0,0.18)', outline: dropHighlight ? '3px dashed #555' : 'none', flexShrink:0, overflow:'hidden' }}>
+            style={{ position:'relative', width:`${canvasW}px`, height:`${canvasH}px`, background: bg, boxShadow:'0 4px 32px rgba(0,0,0,0.18)', outline: dropHighlight ? '3px dashed #555' : 'none', flexShrink:0, overflow:'hidden', touchAction:'none' }}>
 
             {canvasItems.length === 0 && (
               <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', pointerEvents:'none', gap:'10px' }}>
