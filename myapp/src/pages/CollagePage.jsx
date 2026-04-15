@@ -70,8 +70,12 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
-  const isMobile = windowWidth < 768
-  const canvasSize = isMobile ? Math.min(windowWidth - 32, 400) : 600
+  const isMobile  = windowWidth < 768
+  // Mobile: full width, 4:3 landscape height (compact, fits 5-6 items)
+  // Desktop: 480×480 (was 600, felt too spacious)
+  const canvasW = isMobile ? Math.min(windowWidth - 32, 380) : 480
+  const canvasH = isMobile ? Math.round(canvasW * 0.78) : 480
+  const canvasSize = canvasW // keep for backward compat references
 
   // ── Load wardrobe ────────────────────────────────────────────────
   useEffect(() => {
@@ -257,6 +261,8 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
         items:          canvasItems,
         bg,
         thumbnail,
+        canvasW,
+        canvasH,
         createdAt:      serverTimestamp(),
       })
       setSaveSuccess(true)
@@ -398,7 +404,7 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
         {/* ── Canvas ── */}
         <div style={{ flex:1, overflow:'auto', display:'flex', alignItems:'center', justifyContent:'center', background:'#e8e8e8', padding: isMobile ? '16px' : '24px' }}>
           <div ref={canvasRef} onClick={() => setSelectedId(null)}
-            style={{ position:'relative', width:`${canvasSize}px`, height:`${canvasSize}px`, background: bg, boxShadow:'0 4px 32px rgba(0,0,0,0.18)', outline: dropHighlight ? '3px dashed #555' : 'none', flexShrink:0, overflow:'hidden' }}>
+            style={{ position:'relative', width:`${canvasW}px`, height:`${canvasH}px`, background: bg, boxShadow:'0 4px 32px rgba(0,0,0,0.18)', outline: dropHighlight ? '3px dashed #555' : 'none', flexShrink:0, overflow:'hidden' }}>
 
             {canvasItems.length === 0 && (
               <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', pointerEvents:'none', gap:'10px' }}>
@@ -436,19 +442,40 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
       {/* ── Mobil: horisontell klädstrip längst ned ── */}
       {isMobile && (
         <div style={{ borderTop:'1px solid #e8e8e8', background:'#fafafa', flexShrink:0 }}>
-          <div style={{ padding:'6px 12px 4px', fontSize:'10px', color:'#aaa', letterSpacing:'0.08em', fontWeight:'700' }}>TRYCK OCH HÅLL — DRA TILL CANVASEN</div>
+          <div style={{ padding:'6px 12px 3px', fontSize:'10px', color:'#aaa', letterSpacing:'0.06em', fontWeight:'700' }}>
+            TRYCK FÖR ATT LÄGGA TILL
+          </div>
           <div style={{ display:'flex', gap:'8px', overflowX:'auto', padding:'0 12px 12px', WebkitOverflowScrolling:'touch' }}>
-            {wardrobe.map(item => (
-              <div key={item.id}
-                onPointerDown={e => onSidebarPointerDown(e, item)}
-                style={{ flexShrink:0, width:'60px', height:'80px', borderRadius:'6px', overflow:'hidden', background:'#f0f0f0', position:'relative', userSelect:'none', touchAction:'none', cursor:'grab' }}>
-                {item.photoURL
-                  ? <img src={item.photoURL} alt="" draggable={false}
-                      style={{ width:'100%', height:'100%', objectFit:'cover', pointerEvents:'none' }}/>
-                  : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'20px' }}>👗</div>
-                }
-              </div>
-            ))}
+            {wardrobe.map(item => {
+              const alreadyAdded = canvasItems.some(ci => ci.photoURL === item.photoURL)
+              return (
+                <div key={item.id}
+                  onPointerDown={e => onSidebarPointerDown(e, item)}
+                  onClick={() => {
+                    // Tap to add: place in a cascading position so items don't overlap
+                    const offset = canvasItems.length * 18
+                    const x = Math.min(20 + offset, canvasW - 130)
+                    const y = Math.min(20 + offset, canvasH - 130)
+                    const newItem = {
+                      uid: Date.now(), photoURL: item.photoURL,
+                      category: item.category, brand: item.brand,
+                      x, y, width: 120,
+                    }
+                    setCanvasItems(p => [...p, newItem])
+                    setSelectedId(newItem.uid)
+                  }}
+                  style={{ flexShrink:0, width:'64px', height:'84px', borderRadius:'8px', overflow:'hidden', background:'#f0f0f0', position:'relative', userSelect:'none', touchAction:'none', cursor:'pointer', opacity: alreadyAdded ? 0.45 : 1, outline: alreadyAdded ? '2px solid #111' : 'none' }}>
+                  {item.photoURL
+                    ? <img src={item.photoURL} alt="" draggable={false}
+                        style={{ width:'100%', height:'100%', objectFit:'cover', pointerEvents:'none' }}/>
+                    : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'20px' }}>👗</div>
+                  }
+                  {alreadyAdded && (
+                    <div style={{ position:'absolute', top:'4px', right:'4px', width:'16px', height:'16px', borderRadius:'50%', background:'#111', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px', fontWeight:'700' }}>✓</div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

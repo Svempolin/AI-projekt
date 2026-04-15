@@ -3,12 +3,11 @@ import { db } from '../firebase'
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore'
 
 // Renders a collage from items data (positions + photos) — no canvas/CORS needed
-function CollageRenderer({ items, bg, width, height }) {
+function CollageRenderer({ items, bg, width, height, canvasW, canvasH }) {
   if (!items || items.length === 0) {
     return <div style={{ width, height, background: bg || '#f5f0e8' }}/>
   }
 
-  // Normalize: shift all items so min x/y starts at a small padding
   const pad  = 8
   const minX = Math.min(...items.map(it => it.x || 0))
   const minY = Math.min(...items.map(it => it.y || 0))
@@ -18,11 +17,17 @@ function CollageRenderer({ items, bg, width, height }) {
     y: (it.y || 0) - minY + pad,
   }))
 
-  // Find extent of shifted items (height estimated as width * 1.3)
-  const maxX   = Math.max(...shifted.map(it => it.x + (it.width || 160)))
-  const maxY   = Math.max(...shifted.map(it => it.y + (it.width || 160) * 1.3))
-  const extent = Math.max(maxX, maxY) + pad
-  const scale  = Math.min(width, height) / extent
+  // Use saved canvas dimensions if available, otherwise estimate from items
+  const extentX = canvasW
+    ? canvasW - minX + pad
+    : Math.max(...shifted.map(it => it.x + (it.width || 120))) + pad
+  const extentY = canvasH
+    ? canvasH - minY + pad
+    : Math.max(...shifted.map(it => it.y + (it.width || 120) * 1.3)) + pad
+
+  const scaleX = width  / extentX
+  const scaleY = height / extentY
+  const scale  = Math.min(scaleX, scaleY)
 
   return (
     <div style={{ width, height, background: bg || '#f5f0e8', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
@@ -32,7 +37,7 @@ function CollageRenderer({ items, bg, width, height }) {
             position: 'absolute',
             left:      item.x     * scale,
             top:       item.y     * scale,
-            width:     (item.width || 160) * scale,
+            width:     (item.width || 120) * scale,
             objectFit: 'contain',
             pointerEvents: 'none',
           }}
@@ -42,7 +47,7 @@ function CollageRenderer({ items, bg, width, height }) {
   )
 }
 
-// Small thumbnail: shows up to 4 items in a 2x2 grid (simpler, fast)
+// Small thumbnail
 function CollageThumbnail({ collage, size }) {
   const items = collage.items || []
   if (items.length === 0 && collage.thumbnail) {
@@ -51,8 +56,7 @@ function CollageThumbnail({ collage, size }) {
   if (items.length === 0) {
     return <div style={{ width: size, height: size, background: collage.bg || '#f5f0e8' }}/>
   }
-  // Use CollageRenderer for thumbnails too
-  return <CollageRenderer items={items} bg={collage.bg} width={size} height={size}/>
+  return <CollageRenderer items={items} bg={collage.bg} width={size} height={size} canvasW={collage.canvasW} canvasH={collage.canvasH}/>
 }
 
 const BackIcon = () => (
@@ -130,15 +134,25 @@ export default function CollectionsPage({ user, onNavigate, onOpenCollage }) {
             <TrashIcon/> TA BORT
           </button>
         </div>
-        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', background:'#e8e8e8', padding:'32px', overflow:'hidden' }}>
-          <div style={{ boxShadow:'0 8px 40px rgba(0,0,0,0.2)', maxWidth:'600px', maxHeight:'600px', width:'100%', aspectRatio:'1' }}>
-            <CollageRenderer
-              items={preview.items}
-              bg={preview.bg}
-              width={Math.min(600, typeof window !== 'undefined' ? window.innerWidth - 64 : 600)}
-              height={Math.min(600, typeof window !== 'undefined' ? window.innerWidth - 64 : 600)}
-            />
-          </div>
+        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', background:'#e8e8e8', padding:'24px', overflow:'hidden' }}>
+          {(() => {
+            const maxW = Math.min(520, window.innerWidth - 48)
+            const ratio = (preview.canvasH && preview.canvasW) ? preview.canvasH / preview.canvasW : 1
+            const dispW = maxW
+            const dispH = Math.round(maxW * ratio)
+            return (
+              <div style={{ boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}>
+                <CollageRenderer
+                  items={preview.items}
+                  bg={preview.bg}
+                  width={dispW}
+                  height={dispH}
+                  canvasW={preview.canvasW}
+                  canvasH={preview.canvasH}
+                />
+              </div>
+            )
+          })()}
         </div>
       </div>
     )
