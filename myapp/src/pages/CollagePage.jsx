@@ -415,12 +415,12 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
         )}
 
         {/* ── Canvas ── */}
-        {/* Mobile: fixed height so wardrobe strip gets remaining space */}
+        {/* Mobile: fixed height = canvas + padding, so wardrobe gets the rest */}
         <div style={{
-          flexShrink: isMobile ? 0 : 1,
-          flex: isMobile ? 'none' : 1,
+          flexShrink: 0,
           height: isMobile ? canvasH + 24 : undefined,
-          overflow: isMobile ? 'hidden' : 'auto',
+          flex: isMobile ? 'none' : 1,
+          overflow: 'hidden',
           display:'flex', alignItems:'center', justifyContent:'center',
           background:'#e8e8e8',
           padding: isMobile ? '12px' : '24px'
@@ -458,81 +458,78 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
             })}
           </div>
         </div>
-      </div>
 
-      {/* ── Mobil: klädpanel med kategorifilterknappar ── */}
-      {isMobile && (() => {
-        // Extract unique categories from wardrobe
-        const cats = ['Alla', ...new Set(
-          wardrobe.map(i => i.category?.split(' |')[0]).filter(Boolean)
-        )]
-        const filtered = activeCategory === 'Alla'
-          ? wardrobe
-          : wardrobe.filter(i => i.category?.startsWith(activeCategory))
+        {/* ── Mobil: klädpanel INUTI main-layout (flex-syskon med canvas) ── */}
+        {isMobile && (() => {
+          const cats = ['Alla', ...new Set(
+            wardrobe.map(i => i.category?.split(' |')[0]).filter(Boolean)
+          )]
+          const filtered = activeCategory === 'Alla'
+            ? wardrobe
+            : wardrobe.filter(i => i.category?.startsWith(activeCategory))
 
-        const addItem = (item) => {
-          const offset = canvasItems.length * 20
-          const x = Math.min(16 + offset, canvasW - 120)
-          const y = Math.min(16 + offset, canvasH - 120)
-          setCanvasItems(p => [...p, {
-            uid: Date.now(), photoURL: item.photoURL,
-            category: item.category, brand: item.brand,
-            x, y, width: 110,
-          }])
-        }
+          const addItem = (item) => {
+            const offset = canvasItems.length * 20
+            const x = Math.min(16 + offset, canvasW - 120)
+            const y = Math.min(16 + offset, canvasH - 120)
+            setCanvasItems(p => [...p, {
+              uid: Date.now(), photoURL: item.photoURL,
+              category: item.category, brand: item.brand,
+              x, y, width: 110,
+            }])
+          }
 
-        return (
-          <div style={{ flex:1, display:'flex', flexDirection:'column', borderTop:'1px solid #e8e8e8', background:'#fff', overflow:'hidden' }}>
-
-            {/* Category filter chips */}
-            <div style={{ display:'flex', gap:'6px', overflowX:'auto', padding:'8px 12px 6px', scrollbarWidth:'none', flexShrink:0 }}>
-              {cats.map(cat => (
-                <button key={cat} onClick={() => setActiveCategory(cat)}
-                  style={{
-                    flexShrink:0, padding:'5px 12px', borderRadius:'20px', border:'none', cursor:'pointer',
-                    background: activeCategory === cat ? '#111' : '#f0f0f0',
-                    color: activeCategory === cat ? '#fff' : '#555',
-                    fontSize:'11px', fontWeight:'700', letterSpacing:'0.04em',
-                    transition:'all 0.15s'
-                  }}>
-                  {cat.toUpperCase()}
-                </button>
-              ))}
-            </div>
-
-            {/* Garment strip */}
-            <div style={{ flex:1, overflowX:'auto', overflowY:'hidden', display:'flex', gap:'8px', padding:'4px 12px 12px', WebkitOverflowScrolling:'touch', alignItems:'center' }}>
-              {filtered.length === 0 && (
-                <div style={{ color:'#ccc', fontSize:'12px', padding:'8px' }}>Inga plagg i denna kategori</div>
-              )}
-              {filtered.map(item => {
-                const alreadyAdded = canvasItems.some(ci => ci.photoURL === item.photoURL)
-                return (
-                  <div key={item.id}
-                    onPointerDown={e => onSidebarPointerDown(e, item)}
-                    onClick={() => addItem(item)}
+          return (
+            <div style={{ flex:1, display:'flex', flexDirection:'column', borderTop:'1px solid #e8e8e8', background:'#fff', overflow:'hidden', minHeight:0 }}>
+              {/* Category filter chips */}
+              <div style={{ display:'flex', gap:'6px', overflowX:'auto', padding:'8px 12px 6px', scrollbarWidth:'none', flexShrink:0 }}>
+                {cats.map(cat => (
+                  <button key={cat} onClick={() => setActiveCategory(cat)}
                     style={{
-                      flexShrink:0, width:'62px', height:'82px', borderRadius:'8px',
-                      overflow:'hidden', background:'#f0f0f0', position:'relative',
-                      userSelect:'none', touchAction:'none', cursor:'pointer',
-                      opacity: alreadyAdded ? 0.4 : 1,
-                      outline: alreadyAdded ? '2px solid #111' : '1.5px solid transparent',
+                      flexShrink:0, padding:'5px 12px', borderRadius:'20px', border:'none', cursor:'pointer',
+                      background: activeCategory === cat ? '#111' : '#f0f0f0',
+                      color: activeCategory === cat ? '#fff' : '#555',
+                      fontSize:'11px', fontWeight:'700', letterSpacing:'0.04em',
                     }}>
-                    {item.photoURL
-                      ? <img src={item.photoURL} alt="" draggable={false}
-                          style={{ width:'100%', height:'100%', objectFit:'cover', pointerEvents:'none' }}/>
-                      : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'20px' }}>👗</div>
-                    }
-                    {alreadyAdded && (
-                      <div style={{ position:'absolute', top:'3px', right:'3px', width:'15px', height:'15px', borderRadius:'50%', background:'#111', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'9px', fontWeight:'700' }}>✓</div>
-                    )}
-                  </div>
-                )
-              })}
+                    {cat.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              {/* Garment strip */}
+              <div style={{ flex:1, overflowX:'auto', overflowY:'hidden', display:'flex', gap:'8px', padding:'4px 12px 12px', WebkitOverflowScrolling:'touch', alignItems:'center', minHeight:0 }}>
+                {filtered.length === 0 && (
+                  <div style={{ color:'#ccc', fontSize:'12px', padding:'8px' }}>Inga plagg i denna kategori</div>
+                )}
+                {filtered.map(item => {
+                  const alreadyAdded = canvasItems.some(ci => ci.photoURL === item.photoURL)
+                  return (
+                    <div key={item.id}
+                      onPointerDown={e => onSidebarPointerDown(e, item)}
+                      onClick={() => addItem(item)}
+                      style={{
+                        flexShrink:0, width:'62px', height:'82px', borderRadius:'8px',
+                        overflow:'hidden', background:'#f0f0f0', position:'relative',
+                        userSelect:'none', touchAction:'none', cursor:'pointer',
+                        opacity: alreadyAdded ? 0.4 : 1,
+                        outline: alreadyAdded ? '2px solid #111' : 'none',
+                      }}>
+                      {item.photoURL
+                        ? <img src={item.photoURL} alt="" draggable={false}
+                            style={{ width:'100%', height:'100%', objectFit:'cover', pointerEvents:'none' }}/>
+                        : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'20px' }}>👗</div>
+                      }
+                      {alreadyAdded && (
+                        <div style={{ position:'absolute', top:'3px', right:'3px', width:'15px', height:'15px', borderRadius:'50%', background:'#111', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'9px', fontWeight:'700' }}>✓</div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        )
-      })()}
+          )
+        })()}
+
+      </div>{/* end main layout */}
 
       {/* ── Desktop bottom hint ── */}
       {!isMobile && (
