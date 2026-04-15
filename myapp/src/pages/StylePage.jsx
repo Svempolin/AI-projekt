@@ -320,7 +320,7 @@ export default function StylePage({ user, onNavigate }) {
         <div style={{ flexShrink: 0, display: 'flex', borderBottom: '1px solid #e8e8e8', background: '#fff' }}>
           {[
             { key: 'browse', label: 'GARDEROB' },
-            { key: 'board',  label: `STYLE BOARD${canvasItems.length > 0 ? ` (${canvasItems.length})` : ''}` },
+            { key: 'board',  label: `KOLLAGE${canvasItems.length > 0 ? ` (${canvasItems.length})` : ''}` },
           ].map(tab => (
             <button key={tab.key} onClick={() => setMobileTab(tab.key)}
               style={{ flex: 1, padding: '12px 8px', background: 'none', border: 'none', borderBottom: mobileTab === tab.key ? '2px solid #111' : '2px solid transparent', fontWeight: '800', fontSize: '11px', letterSpacing: '0.06em', color: mobileTab === tab.key ? '#111' : '#bbb', cursor: 'pointer', transition: 'all 0.15s' }}>
