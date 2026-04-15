@@ -59,6 +59,7 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
   const [newCollection, setNewCollection]   = useState('')
   const [existingCollections, setExistingCollections] = useState([])
   const [savingToCloud, setSavingToCloud]   = useState(false)
+  const [activeCategory, setActiveCategory] = useState('Alla') // mobile filter
   const [saveSuccess, setSaveSuccess]       = useState(false)
 
   const canvasRef   = useRef()
@@ -414,16 +415,24 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
         )}
 
         {/* ── Canvas ── */}
-        <div style={{ flex:1, overflow: isMobile ? 'hidden' : 'auto', display:'flex', alignItems:'center', justifyContent:'center', background:'#e8e8e8', padding: isMobile ? '12px' : '24px' }}>
+        {/* Mobile: fixed height so wardrobe strip gets remaining space */}
+        <div style={{
+          flexShrink: isMobile ? 0 : 1,
+          flex: isMobile ? 'none' : 1,
+          height: isMobile ? canvasH + 24 : undefined,
+          overflow: isMobile ? 'hidden' : 'auto',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          background:'#e8e8e8',
+          padding: isMobile ? '12px' : '24px'
+        }}>
           <div ref={canvasRef} onClick={() => setSelectedId(null)}
             style={{ position:'relative', width:`${canvasW}px`, height:`${canvasH}px`, background: bg, boxShadow:'0 4px 32px rgba(0,0,0,0.18)', outline: dropHighlight ? '3px dashed #555' : 'none', flexShrink:0, overflow:'hidden', touchAction:'none' }}>
 
             {canvasItems.length === 0 && (
-              <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', pointerEvents:'none', gap:'10px' }}>
-                <div style={{ fontSize:'40px' }}>👗</div>
-                <div style={{ fontSize:'13px', color:'#bbb', letterSpacing:'0.06em', textAlign:'center' }}>
-                  DRAGEN KLÄDER HIT<br/>
-                  <span style={{ fontSize:'11px' }}>från sidopanelen</span>
+              <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', pointerEvents:'none', gap:'8px' }}>
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                <div style={{ fontSize:'11px', color:'#bbb', letterSpacing:'0.06em', textAlign:'center' }}>
+                  {isMobile ? 'TRYCK PÅ ETT PLAGG NEDAN' : 'DRAGEN KLÄDER HIT'}<br/>
                 </div>
               </div>
             )}
@@ -451,46 +460,79 @@ export default function CollagePage({ user, onNavigate, loadedCollage }) {
         </div>
       </div>
 
-      {/* ── Mobil: horisontell klädstrip längst ned ── */}
-      {isMobile && (
-        <div style={{ borderTop:'1px solid #e8e8e8', background:'#fafafa', flexShrink:0 }}>
-          <div style={{ padding:'6px 12px 3px', fontSize:'10px', color:'#aaa', letterSpacing:'0.06em', fontWeight:'700' }}>
-            TRYCK FÖR ATT LÄGGA TILL
-          </div>
-          <div style={{ display:'flex', gap:'8px', overflowX:'auto', padding:'0 12px 12px', WebkitOverflowScrolling:'touch' }}>
-            {wardrobe.map(item => {
-              const alreadyAdded = canvasItems.some(ci => ci.photoURL === item.photoURL)
-              return (
-                <div key={item.id}
-                  onPointerDown={e => onSidebarPointerDown(e, item)}
-                  onClick={() => {
-                    // Tap to add: place in a cascading position so items don't overlap
-                    const offset = canvasItems.length * 18
-                    const x = Math.min(20 + offset, canvasW - 130)
-                    const y = Math.min(20 + offset, canvasH - 130)
-                    const newItem = {
-                      uid: Date.now(), photoURL: item.photoURL,
-                      category: item.category, brand: item.brand,
-                      x, y, width: 120,
+      {/* ── Mobil: klädpanel med kategorifilterknappar ── */}
+      {isMobile && (() => {
+        // Extract unique categories from wardrobe
+        const cats = ['Alla', ...new Set(
+          wardrobe.map(i => i.category?.split(' |')[0]).filter(Boolean)
+        )]
+        const filtered = activeCategory === 'Alla'
+          ? wardrobe
+          : wardrobe.filter(i => i.category?.startsWith(activeCategory))
+
+        const addItem = (item) => {
+          const offset = canvasItems.length * 20
+          const x = Math.min(16 + offset, canvasW - 120)
+          const y = Math.min(16 + offset, canvasH - 120)
+          setCanvasItems(p => [...p, {
+            uid: Date.now(), photoURL: item.photoURL,
+            category: item.category, brand: item.brand,
+            x, y, width: 110,
+          }])
+        }
+
+        return (
+          <div style={{ flex:1, display:'flex', flexDirection:'column', borderTop:'1px solid #e8e8e8', background:'#fff', overflow:'hidden' }}>
+
+            {/* Category filter chips */}
+            <div style={{ display:'flex', gap:'6px', overflowX:'auto', padding:'8px 12px 6px', scrollbarWidth:'none', flexShrink:0 }}>
+              {cats.map(cat => (
+                <button key={cat} onClick={() => setActiveCategory(cat)}
+                  style={{
+                    flexShrink:0, padding:'5px 12px', borderRadius:'20px', border:'none', cursor:'pointer',
+                    background: activeCategory === cat ? '#111' : '#f0f0f0',
+                    color: activeCategory === cat ? '#fff' : '#555',
+                    fontSize:'11px', fontWeight:'700', letterSpacing:'0.04em',
+                    transition:'all 0.15s'
+                  }}>
+                  {cat.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            {/* Garment strip */}
+            <div style={{ flex:1, overflowX:'auto', overflowY:'hidden', display:'flex', gap:'8px', padding:'4px 12px 12px', WebkitOverflowScrolling:'touch', alignItems:'center' }}>
+              {filtered.length === 0 && (
+                <div style={{ color:'#ccc', fontSize:'12px', padding:'8px' }}>Inga plagg i denna kategori</div>
+              )}
+              {filtered.map(item => {
+                const alreadyAdded = canvasItems.some(ci => ci.photoURL === item.photoURL)
+                return (
+                  <div key={item.id}
+                    onPointerDown={e => onSidebarPointerDown(e, item)}
+                    onClick={() => addItem(item)}
+                    style={{
+                      flexShrink:0, width:'62px', height:'82px', borderRadius:'8px',
+                      overflow:'hidden', background:'#f0f0f0', position:'relative',
+                      userSelect:'none', touchAction:'none', cursor:'pointer',
+                      opacity: alreadyAdded ? 0.4 : 1,
+                      outline: alreadyAdded ? '2px solid #111' : '1.5px solid transparent',
+                    }}>
+                    {item.photoURL
+                      ? <img src={item.photoURL} alt="" draggable={false}
+                          style={{ width:'100%', height:'100%', objectFit:'cover', pointerEvents:'none' }}/>
+                      : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'20px' }}>👗</div>
                     }
-                    setCanvasItems(p => [...p, newItem])
-                    setSelectedId(newItem.uid)
-                  }}
-                  style={{ flexShrink:0, width:'64px', height:'84px', borderRadius:'8px', overflow:'hidden', background:'#f0f0f0', position:'relative', userSelect:'none', touchAction:'none', cursor:'pointer', opacity: alreadyAdded ? 0.45 : 1, outline: alreadyAdded ? '2px solid #111' : 'none' }}>
-                  {item.photoURL
-                    ? <img src={item.photoURL} alt="" draggable={false}
-                        style={{ width:'100%', height:'100%', objectFit:'cover', pointerEvents:'none' }}/>
-                    : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'20px' }}>👗</div>
-                  }
-                  {alreadyAdded && (
-                    <div style={{ position:'absolute', top:'4px', right:'4px', width:'16px', height:'16px', borderRadius:'50%', background:'#111', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px', fontWeight:'700' }}>✓</div>
-                  )}
-                </div>
-              )
-            })}
+                    {alreadyAdded && (
+                      <div style={{ position:'absolute', top:'3px', right:'3px', width:'15px', height:'15px', borderRadius:'50%', background:'#111', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'9px', fontWeight:'700' }}>✓</div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ── Desktop bottom hint ── */}
       {!isMobile && (
